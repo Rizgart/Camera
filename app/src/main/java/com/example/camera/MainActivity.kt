@@ -6,6 +6,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
+import android.widget.Button
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -21,9 +22,18 @@ import java.util.concurrent.ExecutorService
 typealias LumaListener = (luma: Double) -> Unit
 
 class MainActivity : AppCompatActivity() {
+    //Camerax Elements
     private var imageCapture: ImageCapture? = null
+    private var preview: Preview? = null
+    private var camera: Camera? = null
 
+    //File elements
     private lateinit var outputDirectory: File
+
+    //View elements
+    private lateinit var buttonTakePhoto: Button
+
+
     private lateinit var cameraExecutor: ExecutorService
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,11 +45,14 @@ class MainActivity : AppCompatActivity() {
             startCamera()
         } else {
             ActivityCompat.requestPermissions(
-                    this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
 
+        buttonTakePhoto = findViewById(R.id.camera_capture_button)
+        buttonTakePhoto.setOnClickListener{takePhoto()}
+
         // Set up the listener for take photo button
-        camera_capture_button.setOnClickListener { takePhoto() }
+        //camera_capture_button.setOnClickListener { takePhoto() }
 
         outputDirectory = getOutputDirectory()
 
@@ -53,7 +66,7 @@ class MainActivity : AppCompatActivity() {
         // Create time-stamped output file to hold the image
         val photoFile = File(
                 outputDirectory,
-                SimpleDateFormat(FILENAME_FORMAT, Locale.US
+                SimpleDateFormat(FILENAME_FORMAT, Locale.ENGLISH
                 ).format(System.currentTimeMillis()) + ".jpg")
 
         // Create output options object which contains file + metadata
@@ -63,15 +76,15 @@ class MainActivity : AppCompatActivity() {
         // been taken
         imageCapture.takePicture(
                 outputOptions, ContextCompat.getMainExecutor(this), object : ImageCapture.OnImageSavedCallback {
-            override fun onError(exc: ImageCaptureException) {
-                Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
-            }
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    val savedUri = Uri.fromFile(photoFile)
+                    val msg = "Photo capture succeeded: $savedUri"
+                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                    Log.d(TAG, msg)
+                }
 
-            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                val savedUri = Uri.fromFile(photoFile)
-                val msg = "Photo capture succeeded: $savedUri"
-                Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                Log.d(TAG, msg)
+                override fun onError(exc: ImageCaptureException) {
+                Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
             }
         })
     }
@@ -84,7 +97,7 @@ class MainActivity : AppCompatActivity() {
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
             // Preview
-            val preview = Preview.Builder()
+            preview = Preview.Builder()
                     .build()
                     .also {
                         it.setSurfaceProvider(viewFinder.createSurfaceProvider())
@@ -96,8 +109,11 @@ class MainActivity : AppCompatActivity() {
             val imageAnalyzer = ImageAnalysis.Builder()
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor, LuminosityAnalyzer { luma ->
-                            Log.d(TAG, "Average luminosity: $luma")
+                        it.setAnalyzer(cameraExecutor, QrCodeAnalyzer { qrCodes ->
+                            qrCodes?.forEach {
+                                Toast.makeText(this, it.rawValue, Toast.LENGTH_SHORT).show()
+                                Log.d("MainActivity", "QR Code detected: ${it.rawValue}.")
+                            }
                         })
                     }
 
@@ -111,6 +127,8 @@ class MainActivity : AppCompatActivity() {
                 // Bind use cases to camera
                 cameraProvider.bindToLifecycle(
                         this, cameraSelector, preview, imageCapture, imageAnalyzer)
+
+
 
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
@@ -144,7 +162,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(
-            requestCode: Int, permissions: Array<String>, grantResults:
+            requestCode: Int, permissions: Array<out String>, grantResults:
             IntArray) {
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
