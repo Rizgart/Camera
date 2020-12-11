@@ -3,9 +3,15 @@ package com.example.camera
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.media.Image
 import android.net.Uri
+import android.util.DisplayMetrics
 import android.util.Log
+import android.util.Size
+import android.view.OrientationEventListener
+import android.view.Surface
 import android.widget.Button
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
@@ -13,6 +19,13 @@ import androidx.core.content.ContextCompat
 import java.util.concurrent.Executors
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import com.google.firebase.ml.vision.FirebaseVision
+import com.google.firebase.ml.vision.objects.FirebaseVisionObjectDetectorOptions
+import com.google.mlkit.common.model.LocalModel
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.demo.kotlin.objectdetector.ObjectGraphic
+import com.google.mlkit.vision.objects.ObjectDetection
+import com.google.mlkit.vision.objects.custom.CustomObjectDetectorOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 import java.nio.ByteBuffer
@@ -115,7 +128,12 @@ class MainActivity : AppCompatActivity() {
                                 Log.d("MainActivity", "QR Code detected: ${it.rawValue}.")
                             }
                         })
+
                     }
+
+
+            val size = Size(DisplayMetrics().widthPixels, DisplayMetrics().heightPixels)
+
 
             // Select back camera as a default
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -197,4 +215,56 @@ class MainActivity : AppCompatActivity() {
             image.close()
         }
     }
+
+    public class ImageAnalyzer(ctx: Context,
+    private val graphicOverlay: GraphicOverlay): ImageAnalysis.Analyzer{
+
+        private val localModel = LocalModel.Builder()
+            .setAssetFilePath("object_detection_mobile_object_localizer_v1_1_default_1.tflite").build()
+
+        private val customObjectDetectorOptions =
+            CustomObjectDetectorOptions.Builder(localModel).
+            setDetectorMode(CustomObjectDetectorOptions.STREAM_MODE).enableClassification()
+                .setClassificationConfidenceThreshold(0.8f)
+                .setMaxPerObjectLabelCount(1).build()
+
+        private val objectDetector = ObjectDetection.getClient(customObjectDetectorOptions)
+
+        var needUpdateGraphicOverlaySourceInfo = true
+
+        override fun analyze(image: ImageProxy) {
+            if(needUpdateGraphicOverlaySourceInfo) {
+                val rotationsDegree = image.imageInfo.rotationDegrees
+                if(rotationsDegree == 0 || rotationsDegree == 180){
+                    graphicOverlay.setImageSourceInfo(
+                        image.width, image.height, false
+                    )
+                }else{
+                    graphicOverlay.setImageSourceInfo(image.height, image.width,
+                    false)
+                }
+            }
+            needUpdateGraphicOverlaySourceInfo = false
+
+            val mediaImage = image.image
+            if(mediaImage != null) {
+
+                val image = InputImage.fromMediaImage(mediaImage, 0)
+
+                objectDetector.process(image)
+                    .addOnFailureListener{ Log.d(TAG, it.printStackTrace().toString())}
+                    .addOnSuccessListener { graphicOverlay.clear()
+                    for (detectedObjects in it){
+                        graphicOverlay.add(ObjectGraphic(graphicOverlay, detectedObjects))
+                    }
+                    graphicOverlay.postInvalidate()
+                    }.addOnCompleteListener{
+                        mediaImage.close()
+                    }
+
+            }
+        }
+
+    }
+
 }

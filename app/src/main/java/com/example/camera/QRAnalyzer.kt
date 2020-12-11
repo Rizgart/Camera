@@ -8,6 +8,7 @@ import com.google.mlkit.vision.barcode.Barcode
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
 
 @UseExperimental(markerClass = ExperimentalGetImage::class)
 class QrCodeAnalyzer(
@@ -29,6 +30,7 @@ class QrCodeAnalyzer(
         image.image?.let {
             val imageValue = InputImage.fromMediaImage(it, image.imageInfo.rotationDegrees)
             val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
+            val Option = ObjectDetectorOptions.Builder().enableMultipleObjects().build()
             val scanner = BarcodeScanning.getClient(options)
             scanner.process(imageValue)
                 .addOnCompleteListener { barcodes ->
