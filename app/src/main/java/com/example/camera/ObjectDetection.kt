@@ -17,9 +17,9 @@ class ObjectDetection(
     private fun rotationDegreesToFirebaseRotation(rotationDegrees: Int): Int {
         return when (rotationDegrees) {
             0 -> 0
-            90 -> 90
-            180 -> 180
-            270 -> 270
+            90 -> 1
+            180 -> 2
+            270 -> 3
             else -> throw IllegalArgumentException("Not supported")
         }
     }

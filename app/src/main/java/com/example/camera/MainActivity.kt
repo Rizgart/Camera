@@ -1,28 +1,18 @@
 package com.example.camera
 
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.media.Image
 import android.net.Uri
-import android.util.DisplayMetrics
+import android.os.Bundle
 import android.util.Log
-import android.util.Size
-import android.view.OrientationEventListener
-import android.view.Surface
 import android.widget.Button
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import java.util.concurrent.Executors
+import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
-import com.google.firebase.ml.vision.FirebaseVision
-import com.google.firebase.ml.vision.common.FirebaseVisionImage
-import com.google.firebase.ml.vision.objects.FirebaseVisionObjectDetectorOptions
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.google.mlkit.common.model.LocalModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.demo.kotlin.objectdetector.ObjectGraphic
@@ -34,6 +24,8 @@ import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
 typealias LumaListener = (luma: Double) -> Unit
 
 class MainActivity : AppCompatActivity() {
@@ -134,10 +126,10 @@ class MainActivity : AppCompatActivity() {
             val imageAnalyzer2 = ImageAnalysis.Builder()
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, ObjectDetection { objectDetection ->
-                        objectDetection?.forEach {
+                    it.setAnalyzer(cameraExecutor, ObjectDetection { detectedObjects ->
+                        detectedObjects?.forEach {
                             Toast.makeText(this, it.toString(), Toast.LENGTH_LONG)
-                            Log.d("MainActivity", "Object detected: ${it.toString()}.")
+                            Log.d("MainActivity", "Object detected: $it")
                         }
                     })
 
