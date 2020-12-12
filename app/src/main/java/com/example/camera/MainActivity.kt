@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.media.Image
 import android.net.Uri
 import android.util.DisplayMetrics
@@ -20,6 +21,7 @@ import java.util.concurrent.Executors
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import com.google.firebase.ml.vision.FirebaseVision
+import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.objects.FirebaseVisionObjectDetectorOptions
 import com.google.mlkit.common.model.LocalModel
 import com.google.mlkit.vision.common.InputImage
@@ -38,7 +40,6 @@ class MainActivity : AppCompatActivity() {
     //Camerax Elements
     private var imageCapture: ImageCapture? = null
     private var preview: Preview? = null
-    private var camera: Camera? = null
 
     //File elements
     private lateinit var outputDirectory: File
@@ -64,8 +65,6 @@ class MainActivity : AppCompatActivity() {
         buttonTakePhoto = findViewById(R.id.camera_capture_button)
         buttonTakePhoto.setOnClickListener{takePhoto()}
 
-        // Set up the listener for take photo button
-        //camera_capture_button.setOnClickListener { takePhoto() }
 
         outputDirectory = getOutputDirectory()
 
@@ -119,6 +118,7 @@ class MainActivity : AppCompatActivity() {
             imageCapture = ImageCapture.Builder()
                     .build()
 
+
             val imageAnalyzer = ImageAnalysis.Builder()
                     .build()
                     .also {
@@ -131,9 +131,17 @@ class MainActivity : AppCompatActivity() {
 
                     }
 
+            val imageAnalyzer2 = ImageAnalysis.Builder()
+                .build()
+                .also {
+                    it.setAnalyzer(cameraExecutor, ObjectDetection { objectDetection ->
+                        objectDetection?.forEach {
+                            Toast.makeText(this, it.toString(), Toast.LENGTH_LONG)
+                            Log.d("MainActivity", "Object detected: ${it.toString()}.")
+                        }
+                    })
 
-            val size = Size(DisplayMetrics().widthPixels, DisplayMetrics().heightPixels)
-
+                }
 
             // Select back camera as a default
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -144,7 +152,7 @@ class MainActivity : AppCompatActivity() {
 
                 // Bind use cases to camera
                 cameraProvider.bindToLifecycle(
-                        this, cameraSelector, preview, imageCapture, imageAnalyzer)
+                        this, cameraSelector, preview, imageCapture, imageAnalyzer2)
 
 
 
@@ -268,3 +276,5 @@ class MainActivity : AppCompatActivity() {
     }
 
 }
+
+
