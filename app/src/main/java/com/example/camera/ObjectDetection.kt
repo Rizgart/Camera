@@ -1,5 +1,6 @@
 package com.example.camera
 
+import android.graphics.Bitmap
 import androidx.annotation.experimental.UseExperimental
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
@@ -8,6 +9,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.DetectedObject
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
+import com.google.mlkit.vision.objects.defaults.PredefinedCategory
 
 @UseExperimental(markerClass = ExperimentalGetImage::class)
 class ObjectDetection(
@@ -28,9 +30,48 @@ class ObjectDetection(
         val rotation = rotationDegreesToFirebaseRotation(image.imageInfo.rotationDegrees)
         image.image?.let {
             val imageValue = InputImage.fromMediaImage(it, image.imageInfo.rotationDegrees)
-            val options = ObjectDetectorOptions.Builder().setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
+            // Live detection and tracking
+            val options = ObjectDetectorOptions.Builder()
+                .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
+                .enableClassification()  // Optional
                 .build()
-            val Option = ObjectDetectorOptions.Builder().enableMultipleObjects().build()
+            val objectDetector = ObjectDetection.getClient(options)
+
+            val image = InputImage.fromBitmap(
+                Bitmap.createBitmap(IntArray(100 * 100), 100, 100,
+                    Bitmap.Config.ARGB_8888), 0)
+
+            objectDetector.process(image)
+                .addOnSuccessListener { results ->
+                    // Task completed successfully
+                    // ...
+                }
+                .addOnFailureListener { e ->
+                    // Task failed with an exception
+                    // ...
+                }
+
+            val results = listOf<DetectedObject>()
+            // [START read_results_default]
+            for (detectedObject in results) {
+                val boundingBox = detectedObject.boundingBox
+                val trackingId = detectedObject.trackingId
+                for (label in detectedObject.labels) {
+                    val text = label.text
+                    if (PredefinedCategory.FOOD == text) {
+                        // ...
+                    }
+                    val index = label.index
+                    if (PredefinedCategory.FOOD_INDEX == index) {
+                        // ...
+                    }
+                    val confidence = label.confidence
+                }
+            }
+
+
+            /*
+
             val scanner = ObjectDetection.getClient(options)
 
             scanner.process(imageValue)
@@ -48,7 +89,10 @@ class ObjectDetection(
                     failure.printStackTrace()
                     image.image?.close()
                     image.close()
-                }
+                }*/
+
+
+
         }
     }
 
